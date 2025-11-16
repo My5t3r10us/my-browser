@@ -6,6 +6,7 @@ import NavigationBar from './components/NavigationBar';
 import BookmarksBar from './components/BookmarksBar';
 import HomePage from './components/HomePage';
 import useBrowserStore from './store/browserStore';
+import electronAPI from './utils/electronAPI';
 
 function App() {
   const { 
@@ -19,10 +20,10 @@ function App() {
 
   useEffect(() => {
     // Load initial bookmarks
-    window.electronAPI.getBookmarks().then(setBookmarks);
+    electronAPI.getBookmarks().then(setBookmarks);
     
     // Set up event listeners
-    window.electronAPI.onNavigationUpdated((data) => {
+    electronAPI.onNavigationUpdated((data) => {
       updateTab(data.id, {
         url: data.url,
         canGoBack: data.canGoBack,
@@ -31,19 +32,19 @@ function App() {
       });
     });
     
-    window.electronAPI.onTitleUpdated((data) => {
+    electronAPI.onTitleUpdated((data) => {
       updateTab(data.id, { title: data.title });
     });
     
-    window.electronAPI.onFaviconUpdated((data) => {
+    electronAPI.onFaviconUpdated((data) => {
       updateTab(data.id, { favicon: data.favicon });
     });
     
-    window.electronAPI.onBookmarksUpdated((bookmarks) => {
+    electronAPI.onBookmarksUpdated((bookmarks) => {
       setBookmarks(bookmarks);
     });
     
-    window.electronAPI.onGroupsUpdated((groups) => {
+    electronAPI.onGroupsUpdated((groups) => {
       setTabGroups(groups);
     });
     
@@ -54,11 +55,11 @@ function App() {
     
     // Cleanup
     return () => {
-      window.electronAPI.removeAllListeners('navigation-updated');
-      window.electronAPI.removeAllListeners('title-updated');
-      window.electronAPI.removeAllListeners('favicon-updated');
-      window.electronAPI.removeAllListeners('bookmarks-updated');
-      window.electronAPI.removeAllListeners('groups-updated');
+      electronAPI.removeAllListeners('navigation-updated');
+      electronAPI.removeAllListeners('title-updated');
+      electronAPI.removeAllListeners('favicon-updated');
+      electronAPI.removeAllListeners('bookmarks-updated');
+      electronAPI.removeAllListeners('groups-updated');
     };
   }, []);
 

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, BrowserView, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 
 let mainWindow;
 let views = new Map();
@@ -59,6 +60,14 @@ function createWindow() {
   }
 
   loadData();
+
+  // Handle window resize once the window exists
+  mainWindow.on('resize', () => {
+    if (currentViewId && views.has(currentViewId)) {
+      const view = views.get(currentViewId);
+      view.setBounds(getContentBounds());
+    }
+  });
 
   // Send initial data to renderer
   mainWindow.webContents.on('did-finish-load', () => {
@@ -221,7 +230,7 @@ ipcMain.handle('reload', (event, id) => {
 });
 
 ipcMain.handle('add-bookmark', (event, bookmark) => {
-  bookmarks.push({ ...bookmark, id: Date.now().toString() });
+  bookmarks.push({ ...bookmark, id: randomUUID() });
   saveBookmarks();
   mainWindow.webContents.send('bookmarks-updated', bookmarks);
   return bookmarks;
@@ -276,14 +285,6 @@ ipcMain.handle('maximize-window', () => {
 
 ipcMain.handle('close-window', () => {
   mainWindow.close();
-});
-
-// Handle window resize
-mainWindow?.on('resize', () => {
-  if (currentViewId && views.has(currentViewId)) {
-    const view = views.get(currentViewId);
-    view.setBounds(getContentBounds());
-  }
 });
 
 app.whenReady().then(createWindow);

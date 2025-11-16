@@ -1,16 +1,17 @@
 import React from 'react';
+import electronAPI from '../utils/electronAPI';
 
 const TitleBar = () => {
   const handleMinimize = () => {
-    window.electronAPI.minimizeWindow();
+    electronAPI.minimizeWindow();
   };
 
   const handleMaximize = () => {
-    window.electronAPI.maximizeWindow();
+    electronAPI.maximizeWindow();
   };
 
   const handleClose = () => {
-    window.electronAPI.closeWindow();
+    electronAPI.closeWindow();
   };
 
   return (
