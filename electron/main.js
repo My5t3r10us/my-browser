@@ -67,6 +67,16 @@ function createWindow() {
   });
 }
 
+function getContentBounds() {
+  const bounds = mainWindow.getBounds();
+  return {
+    x: 0,
+    y: 140, // Space for tabs and navigation
+    width: bounds.width,
+    height: bounds.height - 140
+  };
+}
+
 function createBrowserView(id, url = 'about:blank') {
   const view = new BrowserView({
     webPreferences: {
@@ -78,13 +88,7 @@ function createBrowserView(id, url = 'about:blank') {
   mainWindow.addBrowserView(view);
   
   // Set bounds leaving space for the UI
-  const bounds = mainWindow.getBounds();
-  view.setBounds({ 
-    x: 0, 
-    y: 140, // Space for tabs and navigation
-    width: bounds.width, 
-    height: bounds.height - 140 
-  });
+  view.setBounds(getContentBounds());
 
   view.setAutoResize({ width: true, height: true });
   
@@ -137,13 +141,7 @@ ipcMain.handle('switch-tab', (event, id) => {
 
   if (views.has(id)) {
     const view = views.get(id);
-    const bounds = mainWindow.getBounds();
-    view.setBounds({ 
-      x: 0, 
-      y: 140, 
-      width: bounds.width, 
-      height: bounds.height - 140 
-    });
+    view.setBounds(getContentBounds());
     currentViewId = id;
     return true;
   }
@@ -167,13 +165,23 @@ ipcMain.handle('close-tab', (event, id) => {
 ipcMain.handle('navigate', (event, { id, url }) => {
   if (views.has(id)) {
     const view = views.get(id);
-    
+
     // Handle internal pages
     if (url === 'home://newtab') {
       view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+      if (currentViewId === id) {
+        currentViewId = null;
+      }
       return;
     }
-    
+
+    // Ensure the view is visible when leaving the home page
+    const bounds = view.getBounds();
+    if (bounds.width === 0 || bounds.height === 0) {
+      view.setBounds(getContentBounds());
+      currentViewId = id;
+    }
+
     // Ensure proper URL format
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       if (url.includes('.') && !url.includes(' ')) {
@@ -274,13 +282,7 @@ ipcMain.handle('close-window', () => {
 mainWindow?.on('resize', () => {
   if (currentViewId && views.has(currentViewId)) {
     const view = views.get(currentViewId);
-    const bounds = mainWindow.getBounds();
-    view.setBounds({ 
-      x: 0, 
-      y: 140, 
-      width: bounds.width, 
-      height: bounds.height - 140 
-    });
+    view.setBounds(getContentBounds());
   }
 });
 
