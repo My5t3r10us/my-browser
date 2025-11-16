@@ -63,7 +63,7 @@ function App() {
   }, []);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const showHomePage = activeTab && activeTab.url === 'home://newtab';
+  const showHomePage = !activeTabId || (activeTab && activeTab.url === 'home://newtab');
 
   return (
     <div className="app">

@@ -40,10 +40,26 @@ const useBrowserStore = create((set, get) => ({
     const state = get();
     const tabIndex = state.tabs.findIndex(t => t.id === id);
     const newTabs = state.tabs.filter(t => t.id !== id);
-    
+
     window.electronAPI.closeTab(id);
-    
-    if (state.activeTabId === id && newTabs.length > 0) {
+
+    if (newTabs.length === 0) {
+      set({
+        tabs: [],
+        activeTabId: null
+      });
+
+      // Automatically recreate a home tab to keep the UI in a usable state
+      setTimeout(() => {
+        const currentState = get();
+        if (currentState.tabs.length === 0) {
+          currentState.addTab();
+        }
+      }, 0);
+      return;
+    }
+
+    if (state.activeTabId === id) {
       const newActiveTab = newTabs[Math.max(0, tabIndex - 1)];
       set({
         tabs: newTabs,

@@ -3,8 +3,9 @@ import { Globe, Search, Youtube, Github, Twitter, Mail, ShoppingBag, BookOpen } 
 import useBrowserStore from '../store/browserStore';
 
 const HomePage = () => {
-  const { navigateTo } = useBrowserStore();
+  const { navigateTo, addTab, activeTabId } = useBrowserStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const hasActiveTab = Boolean(activeTabId);
   
   const quickLinks = [
     { title: 'Google', url: 'https://www.google.com', icon: <Search size={24} /> },
@@ -18,6 +19,8 @@ const HomePage = () => {
   ];
   
   const handleSearch = () => {
+    if (!hasActiveTab) return;
+
     if (searchQuery.trim()) {
       const query = encodeURIComponent(searchQuery);
       navigateTo(`https://www.google.com/search?q=${query}`);
@@ -40,28 +43,40 @@ const HomePage = () => {
         <input
           type="text"
           className="home-search-input"
-          placeholder="Search the web..."
+          placeholder={hasActiveTab ? 'Search the web...' : 'Create a tab to start browsing'}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={handleKeyPress}
           autoFocus
+          disabled={!hasActiveTab}
         />
       </div>
-      
+
       <div className="quick-links">
         {quickLinks.map(link => (
-          <div
+          <button
             key={link.url}
             className="quick-link"
-            onClick={() => navigateTo(link.url)}
+            onClick={() => hasActiveTab && navigateTo(link.url)}
+            type="button"
+            disabled={!hasActiveTab}
           >
             <div className="quick-link-icon">
               {link.icon}
             </div>
             <span className="quick-link-title">{link.title}</span>
-          </div>
+          </button>
         ))}
       </div>
+
+      {!hasActiveTab && (
+        <div className="home-empty-state">
+          <p>No active tab is available. Create one to start browsing.</p>
+          <button className="quick-link" type="button" onClick={() => addTab()}>
+            Open a new tab
+          </button>
+        </div>
+      )}
     </div>
   );
 };

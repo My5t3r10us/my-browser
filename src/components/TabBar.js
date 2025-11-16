@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import useBrowserStore from '../store/browserStore';
 import TabGroupMenu from './TabGroupMenu';
@@ -17,6 +17,13 @@ const TabBar = () => {
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [draggedTab, setDraggedTab] = useState(null);
   const [dragOverGroup, setDragOverGroup] = useState(null);
+  const hasOpenTabs = tabs.length > 0;
+
+  useEffect(() => {
+    if (!hasOpenTabs && showGroupMenu) {
+      setShowGroupMenu(false);
+    }
+  }, [hasOpenTabs, showGroupMenu]);
 
   const handleDragStart = (e, tabId) => {
     setDraggedTab(tabId);
@@ -129,11 +136,19 @@ const TabBar = () => {
 
   return (
     <div className="tab-bar">
-      {/* Render groups first */}
-      {groups.map(renderGroup)}
-      
-      {/* Render ungrouped tabs */}
-      {ungroupedTabs.map(renderTab)}
+      {hasOpenTabs ? (
+        <>
+          {/* Render groups first */}
+          {groups.map(renderGroup)}
+
+          {/* Render ungrouped tabs */}
+          {ungroupedTabs.map(renderTab)}
+        </>
+      ) : (
+        <div className="tab tab-placeholder" aria-disabled="true">
+          No tabs open
+        </div>
+      )}
       
       <button 
         className="new-tab-button" 
@@ -143,14 +158,17 @@ const TabBar = () => {
         <Plus size={16} />
       </button>
       
-      <button 
-        className="new-tab-button" 
+      <button
+        className="new-tab-button"
         onClick={() => setShowGroupMenu(!showGroupMenu)}
         title="Tab Groups"
         style={{ position: 'relative' }}
+        disabled={!hasOpenTabs}
       >
         <Layers size={16} />
-        {showGroupMenu && <TabGroupMenu onClose={() => setShowGroupMenu(false)} />}
+        {showGroupMenu && hasOpenTabs && (
+          <TabGroupMenu onClose={() => setShowGroupMenu(false)} />
+        )}
       </button>
     </div>
   );
