@@ -327,11 +327,21 @@ body {
   text-decoration: none;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  border: none;
+  width: 100%;
 }
 
 .quick-link:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.quick-link:disabled,
+.quick-link[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
 }
 
 .quick-link-icon {
@@ -349,6 +359,21 @@ body {
   font-size: 12px;
   color: #666;
   text-align: center;
+}
+
+.home-empty-state {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  color: #666;
+}
+
+.tab.tab-placeholder {
+  justify-content: center;
+  color: #888;
+  pointer-events: none;
 }
 
 /* Loading indicator */
