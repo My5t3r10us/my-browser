@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import electronAPI from '../utils/electronAPI';
+import { generateId } from '../utils/id';
 
 const useBrowserStore = create((set, get) => ({
   tabs: [],
@@ -8,7 +10,7 @@ const useBrowserStore = create((set, get) => ({
   
   // Tab management
   addTab: (url = 'home://newtab') => {
-    const id = Date.now().toString();
+    const id = generateId();
     const newTab = {
       id,
       url,
@@ -25,15 +27,15 @@ const useBrowserStore = create((set, get) => ({
       activeTabId: id
     }));
     
-    window.electronAPI.createTab({ id, url });
-    window.electronAPI.switchTab(id);
+    electronAPI.createTab({ id, url });
+    electronAPI.switchTab(id);
     
     return id;
   },
   
   setActiveTab: (id) => {
     set({ activeTabId: id });
-    window.electronAPI.switchTab(id);
+    electronAPI.switchTab(id);
   },
   
   closeTab: (id) => {
@@ -41,7 +43,7 @@ const useBrowserStore = create((set, get) => ({
     const tabIndex = state.tabs.findIndex(t => t.id === id);
     const newTabs = state.tabs.filter(t => t.id !== id);
 
-    window.electronAPI.closeTab(id);
+    electronAPI.closeTab(id);
 
     if (newTabs.length === 0) {
       set({
@@ -65,7 +67,7 @@ const useBrowserStore = create((set, get) => ({
         tabs: newTabs,
         activeTabId: newActiveTab.id
       });
-      window.electronAPI.switchTab(newActiveTab.id);
+      electronAPI.switchTab(newActiveTab.id);
     } else {
       set({ tabs: newTabs });
     }
@@ -82,7 +84,7 @@ const useBrowserStore = create((set, get) => ({
   navigateTo: (url) => {
     const state = get();
     if (state.activeTabId) {
-      window.electronAPI.navigate({ id: state.activeTabId, url });
+      electronAPI.navigate({ id: state.activeTabId, url });
       get().updateTab(state.activeTabId, { url, isLoading: true });
     }
   },
@@ -90,21 +92,21 @@ const useBrowserStore = create((set, get) => ({
   goBack: () => {
     const state = get();
     if (state.activeTabId) {
-      window.electronAPI.goBack(state.activeTabId);
+      electronAPI.goBack(state.activeTabId);
     }
   },
   
   goForward: () => {
     const state = get();
     if (state.activeTabId) {
-      window.electronAPI.goForward(state.activeTabId);
+      electronAPI.goForward(state.activeTabId);
     }
   },
   
   reload: () => {
     const state = get();
     if (state.activeTabId) {
-      window.electronAPI.reload(state.activeTabId);
+      electronAPI.reload(state.activeTabId);
       get().updateTab(state.activeTabId, { isLoading: true });
     }
   },
@@ -113,12 +115,12 @@ const useBrowserStore = create((set, get) => ({
   setBookmarks: (bookmarks) => set({ bookmarks }),
   
   addBookmark: async (title, url) => {
-    const bookmarks = await window.electronAPI.addBookmark({ title, url });
+    const bookmarks = await electronAPI.addBookmark({ title, url });
     set({ bookmarks });
   },
   
   removeBookmark: async (id) => {
-    const bookmarks = await window.electronAPI.removeBookmark(id);
+    const bookmarks = await electronAPI.removeBookmark(id);
     set({ bookmarks });
   },
   
@@ -133,8 +135,8 @@ const useBrowserStore = create((set, get) => ({
   },
   
   createGroup: async (name, color) => {
-    const groupId = Date.now().toString();
-    const groups = await window.electronAPI.createGroup({
+    const groupId = generateId();
+    const groups = await electronAPI.createGroup({
       id: groupId,
       name,
       color,
@@ -148,18 +150,40 @@ const useBrowserStore = create((set, get) => ({
   addTabToGroup: async (tabId, groupId) => {
     const state = get();
     const group = state.tabGroups.get(groupId);
-    if (group) {
-      const updatedGroup = {
-        ...group,
-        tabs: [...group.tabs, tabId]
-      };
-      const groups = await window.electronAPI.updateGroup({
-        id: groupId,
-        updates: updatedGroup
-      });
-      set({ tabGroups: new Map(groups) });
-      get().updateTab(tabId, { groupId });
+    const tab = state.tabs.find(t => t.id === tabId);
+
+    if (!group || !tab) {
+      return;
     }
+
+    // Remove the tab from its previous group to prevent duplicates
+    if (tab.groupId && tab.groupId !== groupId) {
+      const previousGroup = state.tabGroups.get(tab.groupId);
+      if (previousGroup) {
+        const groups = await electronAPI.updateGroup({
+          id: tab.groupId,
+          updates: {
+            ...previousGroup,
+            tabs: previousGroup.tabs.filter(t => t !== tabId)
+          }
+        });
+        set({ tabGroups: new Map(groups) });
+      }
+    }
+
+    const refreshedState = get();
+    const currentGroup = refreshedState.tabGroups.get(groupId) || group;
+    const uniqueTabs = currentGroup.tabs.filter(t => t !== tabId).concat(tabId);
+
+    const groups = await electronAPI.updateGroup({
+      id: groupId,
+      updates: {
+        ...currentGroup,
+        tabs: uniqueTabs
+      }
+    });
+    set({ tabGroups: new Map(groups) });
+    get().updateTab(tabId, { groupId });
   },
   
   removeTabFromGroup: async (tabId) => {
@@ -172,7 +196,7 @@ const useBrowserStore = create((set, get) => ({
           ...group,
           tabs: group.tabs.filter(t => t !== tabId)
         };
-        const groups = await window.electronAPI.updateGroup({
+        const groups = await electronAPI.updateGroup({
           id: tab.groupId,
           updates: updatedGroup
         });
@@ -186,7 +210,7 @@ const useBrowserStore = create((set, get) => ({
     const state = get();
     const group = state.tabGroups.get(groupId);
     if (group) {
-      const groups = await window.electronAPI.updateGroup({
+      const groups = await electronAPI.updateGroup({
         id: groupId,
         updates: { isCollapsed: !group.isCollapsed }
       });
@@ -202,7 +226,7 @@ const useBrowserStore = create((set, get) => ({
         get().updateTab(tab.id, { groupId: null });
       }
     });
-    const groups = await window.electronAPI.deleteGroup(groupId);
+    const groups = await electronAPI.deleteGroup(groupId);
     set({ tabGroups: new Map(groups) });
   }
 }));
