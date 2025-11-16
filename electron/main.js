@@ -8,6 +8,18 @@ let currentViewId = null;
 let bookmarks = [];
 let tabGroups = new Map();
 
+const VIEW_TOP_OFFSET = 140;
+
+function getViewBounds(windowInstance) {
+  const bounds = windowInstance.getBounds();
+  return {
+    x: 0,
+    y: VIEW_TOP_OFFSET,
+    width: bounds.width,
+    height: bounds.height - VIEW_TOP_OFFSET
+  };
+}
+
 const userDataPath = app.getPath('userData');
 const bookmarksPath = path.join(userDataPath, 'bookmarks.json');
 const groupsPath = path.join(userDataPath, 'groups.json');
@@ -65,6 +77,16 @@ function createWindow() {
     mainWindow.webContents.send('bookmarks-updated', bookmarks);
     mainWindow.webContents.send('groups-updated', Array.from(tabGroups.entries()));
   });
+
+  // Handle window resize
+  mainWindow.on('resize', () => {
+    if (!currentViewId || !views.has(currentViewId)) {
+      return;
+    }
+
+    const view = views.get(currentViewId);
+    view.setBounds(getViewBounds(mainWindow));
+  });
 }
 
 function createBrowserView(id, url = 'about:blank') {
@@ -78,13 +100,7 @@ function createBrowserView(id, url = 'about:blank') {
   mainWindow.addBrowserView(view);
   
   // Set bounds leaving space for the UI
-  const bounds = mainWindow.getBounds();
-  view.setBounds({ 
-    x: 0, 
-    y: 140, // Space for tabs and navigation
-    width: bounds.width, 
-    height: bounds.height - 140 
-  });
+  view.setBounds(getViewBounds(mainWindow));
 
   view.setAutoResize({ width: true, height: true });
   
@@ -137,13 +153,7 @@ ipcMain.handle('switch-tab', (event, id) => {
 
   if (views.has(id)) {
     const view = views.get(id);
-    const bounds = mainWindow.getBounds();
-    view.setBounds({ 
-      x: 0, 
-      y: 140, 
-      width: bounds.width, 
-      height: bounds.height - 140 
-    });
+    view.setBounds(getViewBounds(mainWindow));
     currentViewId = id;
     return true;
   }
@@ -268,20 +278,6 @@ ipcMain.handle('maximize-window', () => {
 
 ipcMain.handle('close-window', () => {
   mainWindow.close();
-});
-
-// Handle window resize
-mainWindow?.on('resize', () => {
-  if (currentViewId && views.has(currentViewId)) {
-    const view = views.get(currentViewId);
-    const bounds = mainWindow.getBounds();
-    view.setBounds({ 
-      x: 0, 
-      y: 140, 
-      width: bounds.width, 
-      height: bounds.height - 140 
-    });
-  }
 });
 
 app.whenReady().then(createWindow);
